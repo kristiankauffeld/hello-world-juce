@@ -124,32 +124,38 @@ bool AudioPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layou
 void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                               juce::MidiBuffer& midiMessages)
 {
+    // We aren't handling MIDI messages in this plugin, so we suppress unused-variable warnings.
     juce::ignoreUnused (midiMessages);
 
+    // Ensure the CPU handles denormal floating-point numbers efficiently during this block.
     juce::ScopedNoDenormals noDenormals;
+
+    // Get the number of input audio channels (e.g., 2 for stereo).
     auto totalNumInputChannels  = getTotalNumInputChannels();
+
+    // Get the number of output audio channels (could be more than inputs).
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
+    // For any output channels that don't have corresponding input channels,
+    // we clear (silence) them to avoid passing garbage or noise.
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
+    // Define the gain factor we want to apply to the audio (e.g., 0.5 = reduce volume by half).
+    float gain = 0.5f;  // Apply 50% volume
+
+    // Loop over each input channel.
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
+        // Get a writable pointer to the audio sample array for this channel.
         auto* channelData = buffer.getWritePointer (channel);
-        juce::ignoreUnused (channelData);
-        // ..do something to the data...
+
+        // Loop over each sample in this channel’s buffer.
+        for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
+        {
+            // Apply the gain multiplier to the current sample.
+            channelData[sample] *= gain;
+        }
     }
 }
 
