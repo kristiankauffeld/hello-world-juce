@@ -45,4 +45,8 @@ public:
 private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
+
+    // Declare a pointer to an AudioParameterFloat for controlling gain.
+    // // We prefix it with 'm' to indicate it's a class member variable.
+    juce::AudioParameterFloat* mGainParameter;
 };

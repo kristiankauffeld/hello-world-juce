@@ -12,6 +12,17 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                      #endif
                        )
 {
+    // Add a new float parameter to the processor, exposing it to the DAW/host.
+    // ID: "gain" → internal identifier used in automation and saving.
+    // Name: "Gain" → shown in DAW UI.
+    // Range: 0.0f to 1.0f → from silent to full volume.
+    // Default: 0.5f → start at half volume.
+    addParameter(mGainParameter = new juce::AudioParameterFloat(
+        "gain",
+        "Gain",
+        0.0f,
+        1.0f,
+        0.5f));
 }
 
 AudioPluginAudioProcessor::~AudioPluginAudioProcessor()
@@ -153,8 +164,8 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         // Loop over each sample in this channel’s buffer.
         for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
         {
-            // Apply the gain multiplier to the current sample.
-            channelData[sample] *= gain;
+            // Apply the real-time adjustable gain to the current sample.
+            channelData[sample] *= mGainParameter->get();
         }
     }
 }
