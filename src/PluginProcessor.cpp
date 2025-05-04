@@ -23,6 +23,10 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         0.0f,
         1.0f,
         0.5f));
+
+    // Initialize the smoothed gain value to match the initial gain parameter value.
+    // This ensures we start without any jump between initial parameter and smoothed value.
+    mGainSmoothed = mGainParameter->get();
 }
 
 AudioPluginAudioProcessor::~AudioPluginAudioProcessor()
@@ -141,32 +145,30 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     // Ensure the CPU handles denormal floating-point numbers efficiently during this block.
     juce::ScopedNoDenormals noDenormals;
 
-    // Get the number of input audio channels (e.g., 2 for stereo).
+    // Get the number of input and output channels.
     auto totalNumInputChannels  = getTotalNumInputChannels();
-
-    // Get the number of output audio channels (could be more than inputs).
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    // For any output channels that don't have corresponding input channels,
-    // we clear (silence) them to avoid passing garbage or noise.
+    // Clear any extra output channels beyond the number of input channels.
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    // Define the gain factor we want to apply to the audio (e.g., 0.5 = reduce volume by half).
-    float gain = 0.5f;  // Apply 50% volume
+    // Get writable pointers for the left and right channels (assuming stereo).
+    auto *channelLeft = buffer.getWritePointer(0);
+    auto *channelRight = buffer.getWritePointer(1);
 
-    // Loop over each input channel.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        // Get a writable pointer to the audio sample array for this channel.
-        auto* channelData = buffer.getWritePointer (channel);
+    // Loop over each sample in the buffer.
+    for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
 
-        // Loop over each sample in this channel’s buffer.
-        for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
-        {
-            // Apply the real-time adjustable gain to the current sample.
-            channelData[sample] *= mGainParameter->get();
-        }
+        // Apply a one-pole smoothing filter to gradually move mGainSmoothed toward the current target gain.
+        // Formula: smoothed = smoothed - smoothingFactor * (smoothed - target)
+        mGainSmoothed = mGainSmoothed - 0.005*(mGainSmoothed - mGainParameter->get());
+
+        // Apply the smoothed gain value to the left channel sample.
+        channelLeft[sample] *= mGainSmoothed;
+
+        // Apply the smoothed gain value to the right channel sample.
+        channelRight[sample] *= mGainSmoothed;
     }
 }
 

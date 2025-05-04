@@ -49,4 +49,8 @@ private:
     // Declare a pointer to an AudioParameterFloat for controlling gain.
     // // We prefix it with 'm' to indicate it's a class member variable.
     juce::AudioParameterFloat* mGainParameter;
+
+    // Declare a floating-point member variable to hold the smoothed gain value.
+    // This will track the gain as it slowly approaches the target value over time.
+    float mGainSmoothed;
 };
